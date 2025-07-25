@@ -27,5 +27,5 @@ menu "Example configuration"
             bool "AHT20"
     endchoice
 
-    rsource "../../../../devtools/Kconfig.i2c"
+    rsource "../../../Kconfig.i2c"
 endmenu
