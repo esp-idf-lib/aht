@@ -69,7 +69,7 @@ $(DOXYGEN_OUTPUT_DIR):
 
 # generate XML files from sources with doxygen
 $(DOXYGEN_XML_FILE): $(DOXYGEN_OUTPUT_DIR)
-	$(BUILD_ENV) $(DOXYGEN) $(DOXYGEN_FLAGS) $(DOXYGEN_CONF)
+#	$(BUILD_ENV) $(DOXYGEN) $(DOXYGEN_FLAGS) $(DOXYGEN_CONF)
 	$(SED) -i 's/LIB8STATIC_ALWAYS_INLINE/inline static/g' $(DOXYGEN_XML_DIR)/*.xml
 	$(SED) -i 's/LIB8STATIC/inline static/g' $(DOXYGEN_XML_DIR)/*.xml
 
