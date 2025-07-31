@@ -52,7 +52,8 @@ extern "C" {
 /**
  * Device types
  */
-typedef enum {
+typedef enum
+{
     AHT_TYPE_AHT1x = 0, //!< AHT10, AHT15
     AHT_TYPE_AHT20,     //!< AHT20
 } aht_type_t;
@@ -60,7 +61,8 @@ typedef enum {
 /**
  * Device modes
  */
-typedef enum {
+typedef enum
+{
     AHT_MODE_NORMAL = 0, //!< Normal mode
     AHT_MODE_CYCLE,      //!< Continuous measurements mode, undocumented
 } aht_mode_t;

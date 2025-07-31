@@ -72,7 +72,7 @@ static esp_err_t send_cmd_nolock(aht_t *dev, uint8_t cmd0, uint8_t cmd1, uint8_t
 static esp_err_t setup_nolock(aht_t *dev)
 {
     return send_cmd_nolock(dev, dev->type == AHT_TYPE_AHT1x ? CMD_CALIBRATE_1X : CMD_CALIBRATE_20,
-            (dev->mode == AHT_MODE_NORMAL ? ARG_MODE_NORMAL : ARG_MODE_CYCLE) | ARG_MODE_CALIBRATE, 0, 350);
+                           (dev->mode == AHT_MODE_NORMAL ? ARG_MODE_NORMAL : ARG_MODE_CYCLE) | ARG_MODE_CALIBRATE, 0, 350);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
