@@ -57,9 +57,11 @@ BUILD_ENV=	env PROJECT_NAME="$(EIL_NAME)" \
 				PROJECT_COPYRIGHT="$(EIL_COPYRIGHT)" \
 				PROJECT_AUTHORS="$(EIL_CODEOWNERS)" \
 				PROJECT_RELEASE="$(EIL_VERSION)" \
-				OUTPUT_DIRECTORY="$(DOXYGEN_OUTPUT_DIR)" \
 				MAKE=$(MAKE)
 
+# XXX uncomment when dosxygen is fixed.
+# see https://github.com/esp-idf-lib/shared-workflows/commit/c95c0412b97c5c2e284165fcc4fa44794242d727
+# BUILD_ENV+=	OUTPUT_DIRECTORY="$(DOXYGEN_OUTPUT_DIR)"
 .DEFAULT_GOAL=	all
 .PHONY:	all clean
 
