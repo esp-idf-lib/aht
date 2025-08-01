@@ -81,7 +81,7 @@ esp_err_t aht_init_desc(aht_t *dev, uint8_t addr, i2c_port_t port, gpio_num_t sd
 {
     CHECK_ARG(dev);
 
-    if (addr != AHT_I2C_ADDRESS_GND || addr > AHT_I2C_ADDRESS_VCC)
+    if (addr != AHT_I2C_ADDRESS_GND && addr != AHT_I2C_ADDRESS_VCC)
     {
         ESP_LOGE(TAG, "Invalid I2C address");
         return ESP_ERR_INVALID_ARG;
