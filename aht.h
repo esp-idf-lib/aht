@@ -60,11 +60,15 @@ typedef enum
 
 /**
  * Device modes
+ *
+ * @deprecated The sensor modes are not supported by the driver: it always
+ * triggers a measurement in the command mode. The field is kept for the
+ * source compatibility only.
  */
 typedef enum
 {
     AHT_MODE_NORMAL = 0, //!< Normal mode
-    AHT_MODE_CYCLE,      //!< Continuous measurements mode, undocumented
+    AHT_MODE_CYCLE,      //!< Continuous measurements mode, not supported by the driver
 } aht_mode_t;
 
 /**
@@ -74,7 +78,7 @@ typedef struct
 {
     i2c_dev_t i2c_dev;
     aht_type_t type;
-    aht_mode_t mode;
+    aht_mode_t mode; //!< Not used, see ::aht_mode_t
 } aht_t;
 
 /**
@@ -100,16 +104,27 @@ esp_err_t aht_free_desc(aht_t *dev);
 /**
  * @brief Init device
  *
+ * Waits for the sensor to power up, sends the calibration command and checks
+ * the calibration bit. The command differs between the device types: `0xE1`
+ * for AHT10/AHT15 and `0xBE` for AHT20.
+ *
  * @param dev Device descriptor
- * @return `ESP_OK` on success
+ * @return
+ *         - `ESP_OK` on success
+ *         - `ESP_ERR_INVALID_STATE` if the sensor has not been calibrated
+ *         - `ESP_ERR_TIMEOUT` if the sensor has not become idle
  */
 esp_err_t aht_init(aht_t *dev);
 
 /**
  * @brief Soft reset device
  *
+ * Resets the sensor and initializes it again.
+ *
  * @param dev Device descriptor
- * @return `ESP_OK` on success
+ * @return
+ *         - `ESP_OK` on success
+ *         - `ESP_ERR_TIMEOUT` if the sensor has not become idle
  */
 esp_err_t aht_reset(aht_t *dev);
 
@@ -119,7 +134,7 @@ esp_err_t aht_reset(aht_t *dev);
  * @param dev Device descriptor
  * @param[out] busy       Busy flag
  *                        - true: device currently measuring
- *                        - false: device in indle mode
+ *                        - false: device is idle
  * @param[out] calibrated Calibration success flag
  *                        - true: sensor calibrated
  *                        - false: sensor not calibrated
@@ -130,10 +145,18 @@ esp_err_t aht_get_status(aht_t *dev, bool *busy, bool *calibrated);
 /**
  * @brief Get temperature and relative humidity
  *
+ * Triggers a measurement, waits for the sensor to finish it and reads the result.
+ * The output values are set only when `ESP_OK` is returned. For the AHT20 the
+ * frame contains a CRC-8 checksum, and a corrupted frame is rejected.
+ *
  * @param dev Device descriptor
  * @param[out] temperature Temperature, degrees Celsius
  * @param[out] humidity    Relative humidity, percents
- * @return `ESP_OK` on success
+ * @return
+ *         - `ESP_OK` on success
+ *         - `ESP_ERR_TIMEOUT` if the sensor has not finished the measurement
+ *         - `ESP_ERR_INVALID_STATE` if the sensor is not calibrated
+ *         - `ESP_ERR_INVALID_RESPONSE` if the AHT20 frame has a wrong CRC
  */
 esp_err_t aht_get_data(aht_t *dev, float *temperature, float *humidity);
 

@@ -1,7 +1,7 @@
 ---
 name: aht
 description: Driver for AHT10/AHT15/AHT20 temperature and humidity sensor
-version: 1.0.9
+version: 1.1.0
 groups:
   - temperature
   - humidity
