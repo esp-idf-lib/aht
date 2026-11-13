@@ -57,16 +57,59 @@ static const char *TAG = "aht";
 #define BIT_STATUS_BUSY BIT(7)
 #define BIT_STATUS_CAL  BIT(3)
 
+#define MEASURE_DELAY_MS 80
+#define POLL_INTERVAL_MS 10
+#define POLL_ATTEMPTS    10
+
+#define CRC8_POLY 0x31
+#define CRC8_INIT 0xff
+
 #define CHECK(x) do { esp_err_t __; if ((__ = x) != ESP_OK) return __; } while (0)
 #define CHECK_ARG(VAL) do { if (!(VAL)) return ESP_ERR_INVALID_ARG; } while (0)
+
+static uint8_t crc8(const uint8_t *data, size_t len)
+{
+    uint8_t crc = CRC8_INIT;
+
+    for (size_t i = 0; i < len; i ++)
+    {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; bit ++)
+            crc = crc & 0x80 ? (uint8_t)((crc << 1) ^ CRC8_POLY) : (uint8_t)(crc << 1);
+    }
+
+    return crc;
+}
 
 static esp_err_t send_cmd_nolock(aht_t *dev, uint8_t cmd0, uint8_t cmd1, uint8_t cmd2, uint32_t delay_ms)
 {
     uint8_t buf[3] = { cmd0, cmd1, cmd2 };
-    CHECK(i2c_dev_write(&dev->i2c_dev, NULL, 0, &buf, 3));
+    CHECK(i2c_dev_write(&dev->i2c_dev, NULL, 0, buf, sizeof(buf)));
     vTaskDelay(pdMS_TO_TICKS(delay_ms));
 
     return ESP_OK;
+}
+
+static esp_err_t read_status_nolock(aht_t *dev, uint8_t *status)
+{
+    return i2c_dev_read(&dev->i2c_dev, NULL, 0, status, 1);
+}
+
+static esp_err_t wait_idle_nolock(aht_t *dev)
+{
+    uint8_t status;
+
+    for (int i = 0; i < POLL_ATTEMPTS; i ++)
+    {
+        CHECK(read_status_nolock(dev, &status));
+        if (!(status & BIT_STATUS_BUSY))
+            return ESP_OK;
+
+        vTaskDelay(pdMS_TO_TICKS(POLL_INTERVAL_MS));
+    }
+
+    ESP_LOGE(TAG, "The sensor is still busy");
+    return ESP_ERR_TIMEOUT;
 }
 
 static esp_err_t setup_nolock(aht_t *dev)
@@ -152,11 +195,32 @@ esp_err_t aht_get_data(aht_t *dev, float *temperature, float *humidity)
 {
     CHECK_ARG(dev && (temperature || humidity));
 
-    uint8_t buf[6];
+    uint8_t buf[7];
+    size_t size = dev->type == AHT_TYPE_AHT20 ? 7 : 6;
+
     I2C_DEV_TAKE_MUTEX(&dev->i2c_dev);
-    I2C_DEV_CHECK(&dev->i2c_dev, send_cmd_nolock(dev, CMD_START_MEASUREMENT, ARG_MEAS_DATA, 0, 80));
-    I2C_DEV_CHECK(&dev->i2c_dev, i2c_dev_read(&dev->i2c_dev, NULL, 0, buf, 6));
+    I2C_DEV_CHECK(&dev->i2c_dev, send_cmd_nolock(dev, CMD_START_MEASUREMENT, ARG_MEAS_DATA, 0, MEASURE_DELAY_MS));
+    I2C_DEV_CHECK(&dev->i2c_dev, wait_idle_nolock(dev));
+    I2C_DEV_CHECK(&dev->i2c_dev, i2c_dev_read(&dev->i2c_dev, NULL, 0, buf, size));
     I2C_DEV_GIVE_MUTEX(&dev->i2c_dev);
+
+    if (buf[0] & BIT_STATUS_BUSY)
+    {
+        ESP_LOGE(TAG, "The sensor is still busy");
+        return ESP_ERR_TIMEOUT;
+    }
+
+    if (!(buf[0] & BIT_STATUS_CAL))
+    {
+        ESP_LOGE(TAG, "The sensor is not calibrated");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (size == 7 && crc8(buf, 6) != buf[6])
+    {
+        ESP_LOGE(TAG, "CRC mismatch, the frame is corrupted");
+        return ESP_ERR_INVALID_RESPONSE;
+    }
 
     if (humidity)
     {
